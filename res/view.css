@@ -1,0 +1,32 @@
+body {
+	padding: 0;
+	height: 100vh;
+	overflow: hidden;
+}
+
+canvas {
+	display: block;
+}
+
+.pixelated {
+	image-rendering: pixelated;
+}
+
+.hover-info {
+	position: fixed;
+	top: 0;
+	right: 0;
+	margin: 6px;
+	display: flex;
+	pointer-events: none;
+}
+
+.hover-info > * {
+	padding: 3px 6px;
+	background-color: #0004;
+	color: #fff;
+}
+
+.hover-info > * + * {
+	margin-left: 6px;
+}

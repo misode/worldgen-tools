@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "es2017",
+		"module": "ESNext",
+		"moduleResolution": "node",
+		"esModuleInterop": true,
+		"lib": ["dom", "es2019"],
+		"outDir": "out",
+		"sourceMap": true,
+		"rootDir": "src",
+		"strict": true
+	},
+	"ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  },
+	"include": [
+		"src"
+	]
+}

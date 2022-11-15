@@ -1,0 +1,61 @@
+{
+  "name": "worldgen-tools",
+  "displayName": "Worldgen Tools for Minecraft",
+  "description": "Visualizers for Minecraft worldgen datapacks",
+  "version": "0.0.1",
+  "preview": true,
+  "publisher": "Misodee",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/misode/worldgen-tools.git"
+  },
+  "engines": {
+    "vscode": "^1.73.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:worldgen-tools.openVisualizer",
+    "onWebviewPanel:worldgen-tools.preview"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "worldgen-tools.openVisualizer",
+        "title": "Open visualizer for current file"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "rollup --config",
+    "dev": "rollup --config --watch",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "deepslate": "^0.15.1",
+    "env-paths": "^3.0.0",
+    "fast-glob": "^3.2.12",
+    "find-up": "^5.0.0",
+    "follow-redirects": "^1.15.2",
+    "minimatch": "^3.1.2",
+    "rfdc": "^1.3.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^20.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.6",
+    "@rollup/plugin-typescript": "^8.3.0",
+    "@types/follow-redirects": "^1.14.1",
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.73.0",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "eslint": "^8.26.0",
+    "rollup": "^2.59.0",
+    "typescript": "^4.8.4"
+  },
+  "_id": "worldgen-tools@0.0.1"
+}
