@@ -2,7 +2,7 @@
   "name": "worldgen-tools",
   "displayName": "Worldgen Tools for Minecraft",
   "description": "Visualizers for Minecraft worldgen datapacks",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "preview": true,
   "publisher": "Misodee",
   "repository": {
@@ -56,6 +56,5 @@
     "eslint": "^8.26.0",
     "rollup": "^2.59.0",
     "typescript": "^4.8.4"
-  },
-  "_id": "worldgen-tools@0.0.1"
+  }
 }

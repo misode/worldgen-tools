@@ -1,8 +1,11 @@
 .vscode/**
 .vscode-test/**
+node_modules/**
 src/**
 .gitignore
 .yarnrc
+tsconfig.eslint.json
+rollup.config.js
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/.eslintrc.json
