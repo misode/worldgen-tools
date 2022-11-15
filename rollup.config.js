@@ -5,7 +5,7 @@ import { defineConfig } from 'rollup'
 
 export default defineConfig([
 	{
-		input: 'src/extension.ts',
+		input: 'src/extension/extension.ts',
 		output: [
 			{
 				file: 'out/extension.js',
@@ -22,7 +22,7 @@ export default defineConfig([
 		onwarn,
 	},
 	{
-		input: 'src/view.ts',
+		input: 'src/view/view.ts',
 		output: [
 			{
 				file: 'out/view.js',

@@ -1,7 +1,7 @@
 import { clamp, Identifier, Registry } from 'deepslate'
+import type { HostMessage, ViewMessage, ViewState } from '../shared'
 import type { Sampler } from './samplers'
 import { DensityFunctionSampler, EmptySampler, NoiseSampler } from './samplers'
-import type { HostMessage, ViewMessage, ViewState } from './shared'
 
 declare function acquireVsCodeApi(): {
 	getState(): ViewState,

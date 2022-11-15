@@ -1,6 +1,6 @@
 import { format } from 'util'
 import * as vscode from 'vscode'
-import type { Logger } from './shared'
+import type { Logger } from '../shared'
 import { ViewProvider } from './viewProvider'
 
 export function activate(context: vscode.ExtensionContext) {

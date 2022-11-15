@@ -6,9 +6,9 @@ import minimatch from 'minimatch'
 import path from 'path'
 import rfdc from 'rfdc'
 import * as vscode from 'vscode'
+import type { Logger, ViewState } from '../shared'
+import { RESOURCE_REGEX } from '../shared'
 import { Downloader } from './downloader'
-import type { Logger, ViewState } from './shared'
-import { RESOURCE_REGEX } from './shared'
 import { getNonce } from './util'
 
 const deepClone = rfdc()

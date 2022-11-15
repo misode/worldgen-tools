@@ -7,8 +7,8 @@ import { http, https } from 'follow-redirects'
 import { promises as fsp } from 'fs'
 import type { IncomingMessage } from 'http'
 import path from 'path'
+import type { Logger } from '../shared'
 import { bufferToString, fileUtil, isEnoent, promisifyAsyncIterable } from './fileUtil'
-import type { Logger } from './shared'
 
 type RemoteProtocol = 'http:' | 'https:'
 export type RemoteUriString = `${RemoteProtocol}${string}`
