@@ -1,3 +1,9 @@
+* {
+	--surface: #0004;
+	--surface-2: #0006;
+	--text: #fff;
+}
+
 body {
 	padding: 0;
 	height: 100vh;
@@ -23,10 +29,52 @@ canvas {
 
 .hover-info > * {
 	padding: 3px 6px;
-	background-color: #0004;
-	color: #fff;
+	background-color: var(--surface);
+	color: var(--text);
 }
 
 .hover-info > * + * {
 	margin-left: 6px;
+}
+
+.layer-group {
+	position: fixed;
+	top: 0;
+	left: 0;
+	margin: 6px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	user-select: none;
+}
+
+.layer-select {
+	padding: 3px 6px;
+	margin-bottom: 3px;
+	background-color: var(--surface);
+	color: var(--text);
+	cursor: pointer;
+}
+
+.layer-select:hover {
+	background-color: var(--surface-2);
+}
+
+.layer-options {
+	display: none;
+}
+
+.layer-group:focus-within .layer-options {
+	display: block;
+	background-color: var(--surface);
+	color: var(--text);
+}
+
+.layer-option {
+	padding: 2px 6px;
+	cursor: pointer;
+}
+
+.layer-option:hover {
+	background-color: var(--surface-2);
 }

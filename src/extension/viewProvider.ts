@@ -20,6 +20,7 @@ interface ViewType {
 	key: string
 	name: string
 	match: string
+	fetch?: boolean
 }
 
 export class ViewProvider implements vscode.WebviewPanelSerializer {
@@ -27,10 +28,16 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 		{
 			key: 'worldgen/noise', name: 'Noise',
 			match: 'data/*/worldgen/noise/**/*.json',
+			fetch: true,
 		},
 		{
 			key: 'worldgen/density_function', name: 'Density function',
 			match: 'data/*/worldgen/density_function/**/*.json',
+			fetch: true,
+		},
+		{
+			key: 'worldgen/noise_settings', name: 'Noise settings',
+			match: 'data/*/worldgen/noise_settings/**/*.json',
 		},
 	]
 	private readonly downloader: Downloader
@@ -98,6 +105,9 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 							fileResource = identifier
 						}
 						const content = await fs.readFile(uri.fsPath, 'utf-8')
+						if (data[key] === undefined) {
+							data[key] = {}
+						}
 						data[key][identifier] = content
 						dependencies.set(uri.toString(), { key, identifier })
 					}))
@@ -136,6 +146,7 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 			panel.webview.html = this.getHtml(panel.webview, panel.title)
 		} catch (e) {
 			this.logger.error(`[ViewProvider] Failed to initialize webview ${JSON.stringify(state)}: ${(e as any).message}`)
+			console.error(e)
 		}
 	}
 
@@ -164,6 +175,7 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 		if (this.vanilla !== undefined) return deepClone(this.vanilla)
 
 		const vanillaData = await Promise.all(ViewProvider.TYPES
+			.filter(({ fetch }) => fetch)
 			.map(async({ key }) => {
 				const data = await this.downloader.download({
 					id: `mc-je/${VERSION}/${key}.json.gz`,

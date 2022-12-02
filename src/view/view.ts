@@ -1,7 +1,7 @@
 import { clamp, Identifier, Registry } from 'deepslate'
 import type { HostMessage, ViewMessage, ViewState } from '../shared'
 import type { Sampler } from './samplers'
-import { DensityFunctionSampler, EmptySampler, NoiseSampler } from './samplers'
+import { DensityFunctionSampler, EmptySampler, NoiseSampler, NoiseSettingsSampler } from './samplers'
 
 declare function acquireVsCodeApi(): {
 	getState(): ViewState,
@@ -13,7 +13,7 @@ declare function acquireVsCodeApi(): {
 const vscode = acquireVsCodeApi()
 
 let state = vscode.getState()
-function setState(data: any) {
+function setState(data: Partial<ViewState>) {
 	state = { ...state, ...data }
 	vscode.setState(state)
 }
@@ -28,6 +28,7 @@ let sampler: Sampler<unknown> = new EmptySampler()
 let viewX = Math.floor(state?.viewX ?? 0)
 let viewY = Math.floor(state?.viewY ?? 0)
 let viewScale = ((s) => s > 1/8 && s < 8 ? s : 1)(state?.viewScale ?? 1)
+let initialViewLayer = state?.viewLayer
 
 window.addEventListener('message', event => {
 	const message = event.data as ViewMessage
@@ -52,14 +53,21 @@ function update({ fileResource, fileType, data }: ViewMessage) {
 		})
 		const json = JSON.parse(data[fileType][fileResource])
 		sampler = createSampler(fileType, json)
+		if (initialViewLayer) {
+			sampler.layer = initialViewLayer
+			initialViewLayer = undefined
+		}
 		rerender()
-	} catch (e) {}
+	} catch (e) {
+		console.error(e)
+	}
 }
 
 function createSampler(fileType: string, json: unknown): Sampler<unknown> {
 	switch (fileType) {
 		case 'worldgen/noise': return new NoiseSampler(json, seed)
 		case 'worldgen/density_function': return new DensityFunctionSampler(json, seed)
+		case 'worldgen/noise_settings': return new NoiseSettingsSampler(json, seed)
 	}
 	return new EmptySampler()
 }
@@ -125,6 +133,7 @@ function rerender() {
 		const newScale = Math.pow(Math.E, Math.log(viewScale) + e.deltaY / 200)
 		if (newScale > 1/8 && newScale < 8) {
 			viewScale = newScale
+			setState({ viewScale })
 			requestAnimationFrame(draw)
 		}
 	})
@@ -132,6 +141,34 @@ function rerender() {
 	app.innerHTML = ''
 	app.appendChild(canvas)
 	app.appendChild(hover)
+
+	const layers = sampler.layers()
+	console.log('Get layers', layers)
+	if (layers.length > 1) {
+		const layerGroup = document.createElement('div')
+		layerGroup.classList.add('layer-group')
+		const layerSelect = document.createElement('div')
+		layerSelect.classList.add('layer-select')
+		layerSelect.tabIndex = 0
+		layerSelect.textContent = sampler.layer
+		const layerOptions = document.createElement('div')
+		layerOptions.classList.add('layer-options')
+		for (const layer of layers) {
+			const layerOption = document.createElement('div')
+			layerOption.classList.add('layer-option')
+			layerOption.textContent = layer
+			layerOption.addEventListener('mousedown', () => {
+				layerSelect.textContent = layer
+				sampler.layer = layer
+				setState({ viewLayer: layer })
+				requestAnimationFrame(draw)
+			})
+			layerOptions.appendChild(layerOption)
+		}
+		layerGroup.appendChild(layerSelect)
+		layerGroup.appendChild(layerOptions)
+		app.appendChild(layerGroup)
+	}
 
 	const img = ctx.getImageData(0, 0, width, height)
 
