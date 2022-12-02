@@ -25,8 +25,9 @@ if (state?.seed === undefined) {
 const seed = BigInt(state?.seed ?? 0)
 
 let sampler: Sampler<unknown> = new EmptySampler()
-let viewX = state?.viewX ?? 0
-let viewY = state?.viewY ?? 0
+let viewX = Math.floor(state?.viewX ?? 0)
+let viewY = Math.floor(state?.viewY ?? 0)
+let viewScale = ((s) => s > 1/8 && s < 8 ? s : 1)(state?.viewScale ?? 1)
 
 window.addEventListener('message', event => {
 	const message = event.data as ViewMessage
@@ -68,8 +69,13 @@ function rerender() {
 	const height = clamp(document.body.clientHeight, 128, 512)
 
 	function samplePos(pixelX: number, pixelY: number) {
-		const sampleX = viewX + (pixelX - Math.floor(width / 2))
-		const sampleY = viewY + ((height - pixelY - 1) - Math.floor(height / 2))
+		const flippedPixelY = height - pixelY - 1
+
+		const offX = Math.floor(width / 2)
+		const offY = Math.floor(height / 2)
+
+		const sampleX = Math.floor(viewX + viewScale * (pixelX - offX))
+		const sampleY = Math.floor(viewY + viewScale * (flippedPixelY - offY))
 		return [sampleX, sampleY]
 	}
 
@@ -100,8 +106,8 @@ function rerender() {
 				hover.appendChild(span)
 			})
 		} else {
-			const dx = e.offsetX - dragStart[0]
-			const dy = e.offsetY - dragStart[1]
+			const dx = Math.floor(viewScale * (e.offsetX - dragStart[0]))
+			const dy = Math.floor(viewScale * (e.offsetY - dragStart[1]))
 			dragStart = [e.offsetX, e.offsetY]
 			viewX -= dx
 			viewY += dy
@@ -114,6 +120,13 @@ function rerender() {
 	})
 	canvas.addEventListener('mouseleave', () => {
 		hover.innerHTML = ''
+	})
+	canvas.addEventListener('wheel', e => {
+		const newScale = Math.pow(Math.E, Math.log(viewScale) + e.deltaY / 200)
+		if (newScale > 1/8 && newScale < 8) {
+			viewScale = newScale
+			requestAnimationFrame(draw)
+		}
 	})
 
 	app.innerHTML = ''
