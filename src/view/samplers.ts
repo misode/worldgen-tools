@@ -3,17 +3,33 @@ import type { Color } from './colormap'
 import { viridis } from './colormap'
 import { hashString } from './util'
 
-export abstract class Sampler<D> {
+export interface Sampler {
+	sampleColor(x: number, y: number): Color
+	sampleText(x: number, y: number): string
+	renderConfig?(onChange: (value: unknown) => void): HTMLElement
+	setConfig?(value: unknown): void
+}
+
+export class EmptySampler implements Sampler {
+	sampleColor(): Color {
+		return [0, 0, 0]
+	}
+
+	sampleText() {
+		return ''
+	}
+}
+
+export abstract class CacheableSampler<D> implements Sampler {
 	private readonly cache = new Map<string, D>()
-	#layer: string = 'default'
+
+	protected abstract sample(x: number, y: number): D
+	protected abstract asColor(d: D): Color
+	protected abstract asText(d: D): string
 
 	protected translate(x: number, y: number): { x: number, y: number } {
 		return { x, y }
 	}
-
-	protected abstract sample(x: number, y: number): D
-	protected abstract color(d: D): Color
-	protected abstract text(d: D): string
 
 	private cachedSample(x: number, y: number) {
 		const { x: xx, y: yy } = this.translate(x, y)
@@ -23,185 +39,206 @@ export abstract class Sampler<D> {
 	}
 
 	public sampleColor(x: number, y: number) {
-		return this.color(this.cachedSample(x, y))
+		return this.asColor(this.cachedSample(x, y))
 	}
 
 	public sampleText(x: number, y: number) {
-		return this.text(this.cachedSample(x, y))
+		return this.asText(this.cachedSample(x, y))
+	}
+}
+
+export class LayeredSampler implements Sampler {
+	private readonly layerNames: string[]
+	private currentLayer: string
+	private currentDelegate: Sampler
+
+	constructor(private readonly layers: Record<string, Sampler>) {
+		this.layerNames = Object.keys(layers)
+		this.currentLayer = this.layerNames[0]
+		this.currentDelegate = layers[this.currentLayer]
 	}
 
-	public layers(): string[] {
-		return [this.layer]
+	public sampleColor(x: number, y: number) {
+		return this.currentDelegate.sampleColor(x, y)
 	}
 
-	public get layer() {
-		return this.#layer
+	public sampleText(x: number, y: number) {
+		return this.currentDelegate.sampleText(x, y)
 	}
 
-	public set layer(value: string) {
-		if (this.layers().includes(value)) {
-			this.#layer = value
-			this.cache.clear()
+	public setConfig(value: unknown) {
+		if (typeof value === 'string' && this.layerNames.includes(value)) {
+			this.currentLayer = value
+			this.currentDelegate = this.layers[value]
 		}
 	}
+
+	public renderConfig(onChange: (value: unknown) => void) {
+		const layerGroup = document.createElement('div')
+		layerGroup.classList.add('layer-group')
+		const layerSelect = document.createElement('div')
+		layerSelect.classList.add('layer-select')
+		layerSelect.tabIndex = 0
+		layerSelect.textContent = this.currentLayer
+		const layerOptions = document.createElement('div')
+		layerOptions.classList.add('layer-options')
+		for (const layer of this.layerNames) {
+			const layerOption = document.createElement('div')
+			layerOption.classList.add('layer-option')
+			layerOption.textContent = layer
+			layerOption.addEventListener('mousedown', () => {
+				layerSelect.textContent = layer
+				onChange(layer)
+			})
+			layerOptions.appendChild(layerOption)
+		}
+		layerGroup.appendChild(layerSelect)
+		layerGroup.appendChild(layerOptions)
+		return layerGroup
+	}
 }
 
-export class EmptySampler extends Sampler<number> {
-	sample() {
-		return 0
-	}
-
-	color(): Color {
-		return [0, 0, 0]
-	}
-
-	text() {
-		return ''
-	}
-}
-
-export class NoiseSampler extends Sampler<number> {
-	private readonly noise: NormalNoise
-
-	constructor(json: unknown, seed: bigint) {
+export class NoiseSampler extends CacheableSampler<number> {
+	constructor(private readonly noise: NormalNoise) {
 		super()
-		const random = XoroshiroRandom.create(seed)
-		const params = NoiseParameters.fromJson(json)
-		this.noise = new NormalNoise(random, params)
 	}
 
 	sample(x: number, y: number) {
 		return this.noise.sample(x, y, 0)
 	}
 
-	color(n: number) {
+	asColor(n: number) {
 		return viridis(clampedMap(n, -1, 1, 0, 1))
 	}
 
-	text(n: number) {
+	asText(n: number) {
 		return n.toPrecision(3)
 	} 
 }
 
-export class DensityFunctionSampler extends Sampler<number> {
-	private readonly fn: DensityFunction
-
-	constructor(json: unknown, seed: bigint) {
+export class DensityFunctionSampler extends CacheableSampler<number> {
+	constructor(private readonly fn: DensityFunction) {
 		super()
-		const settings = NoiseGeneratorSettings.create({
-			noise: { minY: 0, height: 256, xzSize: 1, ySize: 1 },
-			noiseRouter: NoiseRouter.create({
-				finalDensity: DensityFunction.fromJson(json),
-			}),
-		})
-		const state = new RandomState(settings, seed)
-		this.fn = state.router.finalDensity
 	}
 
 	sample(x: number, y: number) {
 		return this.fn.compute({ x, y, z: 0 })
 	}
 
-	color(n: number) {
+	asColor(n: number) {
 		const clamped = clampedMap(n, -1, 1, 1, 0)
 		return viridis(clamped <= 0.5 ? clamped - 0.05 : clamped + 0.05)
 	}
 
-	text(n: number) {
+	asText(n: number) {
 		return n.toPrecision(3)
 	}
 }
 
-export class NoiseSettingsSampler extends Sampler<number> {
-	private readonly router: NoiseRouter
-
-	constructor(json: unknown, seed: bigint) {
+export class BiomeSourceSampler extends CacheableSampler<string> {
+	constructor(
+		private readonly generator: NoiseChunkGenerator,
+		private readonly randomState: RandomState,
+		private readonly y = 64
+	) {
 		super()
-		const settings = NoiseGeneratorSettings.fromJson(json)
-		const state = new RandomState(settings, seed)
-		const visitor = state.createVisitor(settings.noise, false)
-		this.router = NoiseRouter.mapAll(settings.noiseRouter, visitor)
-		this.layer = 'finalDensity'
-	}
-
-	sample(x: number, y: number) {
-		return this.router[this.layer as keyof NoiseRouter].compute({ x, y, z: 0 })
-	}
-
-	color(n: number) {
-		const clamped = clampedMap(n, -1, 1, 1, 0)
-		return viridis(clamped <= 0.5 ? clamped - 0.05 : clamped + 0.05)
-	}
-
-	text(n: number) {
-		return n.toPrecision(3)
-	}
-
-	layers() {
-		return Object.keys(this.router ?? {})
-	}
-}
-
-export class DimensionSampler extends Sampler<number | string> {
-	private static readonly PARAMS = ['temperature', 'humidity', 'continentalness', 'erosion', 'weirdness', 'depth'] as const
-	private readonly generator: NoiseChunkGenerator
-	private readonly randomState: RandomState
-
-	constructor(json: unknown, seed: bigint) {
-		super()
-		const root = Json.readObject(json) ?? {}
-		const gen = Json.readObject(root.generator) ?? {}
-		const settings = (typeof gen.settings === 'string'
-			? WorldgenRegistries.NOISE_SETTINGS.get(Identifier.parse(gen.settings))
-			: NoiseGeneratorSettings.fromJson(gen.settings))
-			?? NoiseGeneratorSettings.create({})
-		const biomeSource = BiomeSource.fromJson(gen.biome_source)
-		this.generator = new NoiseChunkGenerator(biomeSource, settings)
-		this.randomState = new RandomState(settings, seed)
-		this.layer = 'biomes'
 	}
 
 	translate(x: number, y: number) {
 		return {
-			x: x << 2,
-			y: y << 2,
+			x: x >> 2,
+			y: y >> 2,
 		}
 	}
 
 	sample(x: number, z: number) {
-		const y = 64
-		const context: DensityFunction.Context = { x: x << 2, y, z: z << 2}
-		switch (this.layer) {
-			case 'biomes': return this.generator.computeBiome(this.randomState, x, y, z).toString()
-			case 'temperature': return this.randomState.router.temperature.compute(context)
-			case 'humidity': return this.randomState.router.vegetation.compute(context)
-			case 'continentalness': return this.randomState.router.continents.compute(context)
-			case 'erosion': return this.randomState.router.erosion.compute(context)
-			case 'weirdness': return this.randomState.router.ridges.compute(context)
-			case 'depth': return this.randomState.router.depth.compute(context)
+		return this.generator.computeBiome(this.randomState, x, this.y, z).toString()
+	}
+
+	asColor(n: string): Color {
+		const color = VanillaColors[n]
+		if (color) return [color[0] / 255, color[1] / 255, color[2] / 255]
+		const h = Math.abs(hashString(n))
+		return [(h % 256) / 255, ((h >> 8) % 256) / 255, ((h >> 16) % 256) / 255]
+	}
+
+	asText(n: string) {
+		return n
+	}
+}
+
+export class BiomeParameterSampler extends CacheableSampler<number> {
+	constructor(
+		private readonly df: DensityFunction,
+		private readonly y = 64
+	) {
+		super()
+	}
+
+	sample(x: number, z: number) {
+		return this.df.compute({ x, y: this.y, z })
+	}
+
+	asColor(n: number): Color {
+		const clamped = clampedMap(n, -1, 1, 0, 1)
+		return viridis(clamped)
+	}
+
+	asText(n: number) {
+		return n.toPrecision(3)
+	}
+}
+
+export function createSampler(fileType: string, json: unknown, seed: bigint): Sampler {
+	switch (fileType) {
+		case 'worldgen/noise': {
+			const random = XoroshiroRandom.create(seed)
+			const params = NoiseParameters.fromJson(json)
+			const noise = new NormalNoise(random, params)
+			return new NoiseSampler(noise)
 		}
-		return 0
-	}
-
-	color(n: string | number): Color {
-		if (typeof n === 'string') {
-			const color = VanillaColors[n]
-			if (color) return [color[0] / 255, color[1] / 255, color[2] / 255]
-			const h = Math.abs(hashString(n))
-			return [(h % 256) / 255, ((h >> 8) % 256) / 255, ((h >> 16) % 256) / 255]
-		} else {
-			const clamped = clampedMap(n, -1, 1, 0, 1)
-			return viridis(clamped)
+		case 'worldgen/density_function': {
+			const settings = NoiseGeneratorSettings.create({
+				noise: { minY: 0, height: 256, xzSize: 1, ySize: 1 },
+				noiseRouter: NoiseRouter.create({
+					finalDensity: DensityFunction.fromJson(json),
+				}),
+			})
+			const state = new RandomState(settings, seed)
+			return new DensityFunctionSampler(state.router.finalDensity)
+		}
+		case 'worldgen/noise_settings': {
+			const settings = NoiseGeneratorSettings.fromJson(json)
+			const state = new RandomState(settings, seed)
+			const visitor = state.createVisitor(settings.noise, false)
+			const router = NoiseRouter.mapAll(settings.noiseRouter, visitor)
+			return new LayeredSampler(Object.fromEntries(Object.entries(router).map(([key, df]) => {
+				return [key, new DensityFunctionSampler(df)]
+			})))
+		}
+		case 'dimension': {
+			const root = Json.readObject(json) ?? {}
+			const gen = Json.readObject(root.generator) ?? {}
+			const settings = (typeof gen.settings === 'string'
+				? WorldgenRegistries.NOISE_SETTINGS.get(Identifier.parse(gen.settings))
+				: NoiseGeneratorSettings.fromJson(gen.settings))
+			?? NoiseGeneratorSettings.create({})
+			const biomeSource = BiomeSource.fromJson(gen.biome_source)
+			const generator = new NoiseChunkGenerator(biomeSource, settings)
+			const randomState = new RandomState(settings, seed)
+			const y = 64
+			return new LayeredSampler({
+				biomes: new BiomeSourceSampler(generator, randomState, y),
+				temperature: new BiomeParameterSampler(randomState.router.temperature, y),
+				humidity: new BiomeParameterSampler(randomState.router.vegetation, y),
+				continentalness: new BiomeParameterSampler(randomState.router.continents, y),
+				erosion: new BiomeParameterSampler(randomState.router.erosion, y),
+				weirdness: new BiomeParameterSampler(randomState.router.ridges, y),
+				depth: new BiomeParameterSampler(randomState.router.depth, y),
+			})
 		}
 	}
-
-	text(n: string | number) {
-		return typeof n === 'string' ? n : n.toPrecision(3)
-	}
-
-	layers() {
-		return ['biomes', ...DimensionSampler.PARAMS]
-	}
+	return new EmptySampler()
 }
 
 export const VanillaColors: Record<string, Color> = {

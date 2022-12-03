@@ -3,7 +3,7 @@ export type ViewState = undefined | {
 	viewX?: number,
 	viewY?: number,
 	viewScale?: number,
-	viewLayer?: string,
+	viewConfig?: unknown,
 	seed?: number,
 }
 

@@ -1,7 +1,7 @@
 import { clamp, Identifier, Registry } from 'deepslate'
 import type { HostMessage, ViewMessage, ViewState } from '../shared'
 import type { Sampler } from './samplers'
-import { DensityFunctionSampler, DimensionSampler, EmptySampler, NoiseSampler, NoiseSettingsSampler } from './samplers'
+import { createSampler, EmptySampler } from './samplers'
 
 declare function acquireVsCodeApi(): {
 	getState(): ViewState,
@@ -24,11 +24,11 @@ if (state?.seed === undefined) {
 }
 const seed = BigInt(state?.seed ?? 0)
 
-let sampler: Sampler<unknown> = new EmptySampler()
+let sampler: Sampler = new EmptySampler()
 let viewX = Math.floor(state?.viewX ?? 0)
 let viewY = Math.floor(state?.viewY ?? 0)
 let viewScale = ((s) => s > 1/8 && s < 8 ? s : 1)(state?.viewScale ?? 1)
-let initialViewLayer = state?.viewLayer
+let viewConfig = state?.viewConfig
 
 window.addEventListener('message', event => {
 	const message = event.data as ViewMessage
@@ -52,23 +52,12 @@ function update({ fileResource, fileType, data }: ViewMessage) {
 			})
 		})
 		const json = JSON.parse(data[fileType][fileResource])
-		sampler = createSampler(fileType, json)
-		if (initialViewLayer) {
-			sampler.layer = initialViewLayer
-			initialViewLayer = undefined
+		sampler = createSampler(fileType, json, seed)
+		if (viewConfig && sampler.setConfig) {
+			sampler.setConfig(viewConfig)
 		}
 		rerender()
 	} catch (e) {}
-}
-
-function createSampler(fileType: string, json: unknown): Sampler<unknown> {
-	switch (fileType) {
-		case 'worldgen/noise': return new NoiseSampler(json, seed)
-		case 'worldgen/density_function': return new DensityFunctionSampler(json, seed)
-		case 'worldgen/noise_settings': return new NoiseSettingsSampler(json, seed)
-		case 'dimension': return new DimensionSampler(json, seed)
-	}
-	return new EmptySampler()
 }
 
 function rerender() {
@@ -140,32 +129,13 @@ function rerender() {
 	app.innerHTML = ''
 	app.appendChild(canvas)
 	app.appendChild(hover)
-
-	const layers = sampler.layers()
-	if (layers.length > 1) {
-		const layerGroup = document.createElement('div')
-		layerGroup.classList.add('layer-group')
-		const layerSelect = document.createElement('div')
-		layerSelect.classList.add('layer-select')
-		layerSelect.tabIndex = 0
-		layerSelect.textContent = sampler.layer
-		const layerOptions = document.createElement('div')
-		layerOptions.classList.add('layer-options')
-		for (const layer of layers) {
-			const layerOption = document.createElement('div')
-			layerOption.classList.add('layer-option')
-			layerOption.textContent = layer
-			layerOption.addEventListener('mousedown', () => {
-				layerSelect.textContent = layer
-				sampler.layer = layer
-				setState({ viewLayer: layer })
-				requestAnimationFrame(draw)
-			})
-			layerOptions.appendChild(layerOption)
-		}
-		layerGroup.appendChild(layerSelect)
-		layerGroup.appendChild(layerOptions)
-		app.appendChild(layerGroup)
+	if (sampler.renderConfig) {
+		app.appendChild(sampler.renderConfig(newConfig => {
+			sampler.setConfig?.(newConfig)
+			viewConfig = newConfig
+			setState({ viewConfig })
+			requestAnimationFrame(draw)
+		}))
 	}
 
 	const img = ctx.getImageData(0, 0, width, height)
