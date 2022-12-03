@@ -38,6 +38,11 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 		{
 			key: 'worldgen/noise_settings', name: 'Noise settings',
 			match: 'data/*/worldgen/noise_settings/**/*.json',
+			fetch: true,
+		},
+		{
+			key: 'dimension', name: 'Dimension',
+			match: 'data/*/dimension/**/*.json',
 		},
 	]
 	private readonly downloader: Downloader

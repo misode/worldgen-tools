@@ -1,7 +1,7 @@
 import { clamp, Identifier, Registry } from 'deepslate'
 import type { HostMessage, ViewMessage, ViewState } from '../shared'
 import type { Sampler } from './samplers'
-import { DensityFunctionSampler, EmptySampler, NoiseSampler, NoiseSettingsSampler } from './samplers'
+import { DensityFunctionSampler, DimensionSampler, EmptySampler, NoiseSampler, NoiseSettingsSampler } from './samplers'
 
 declare function acquireVsCodeApi(): {
 	getState(): ViewState,
@@ -58,9 +58,7 @@ function update({ fileResource, fileType, data }: ViewMessage) {
 			initialViewLayer = undefined
 		}
 		rerender()
-	} catch (e) {
-		console.error(e)
-	}
+	} catch (e) {}
 }
 
 function createSampler(fileType: string, json: unknown): Sampler<unknown> {
@@ -68,6 +66,7 @@ function createSampler(fileType: string, json: unknown): Sampler<unknown> {
 		case 'worldgen/noise': return new NoiseSampler(json, seed)
 		case 'worldgen/density_function': return new DensityFunctionSampler(json, seed)
 		case 'worldgen/noise_settings': return new NoiseSettingsSampler(json, seed)
+		case 'dimension': return new DimensionSampler(json, seed)
 	}
 	return new EmptySampler()
 }
@@ -143,7 +142,6 @@ function rerender() {
 	app.appendChild(hover)
 
 	const layers = sampler.layers()
-	console.log('Get layers', layers)
 	if (layers.length > 1) {
 		const layerGroup = document.createElement('div')
 		layerGroup.classList.add('layer-group')
