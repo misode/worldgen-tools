@@ -1,4 +1,5 @@
 import { clamp, Identifier, Registry } from 'deepslate'
+import { h, render } from 'preact'
 import type { HostMessage, ViewMessage, ViewState } from '../shared'
 import type { Sampler } from './samplers'
 import { createSampler, EmptySampler } from './samplers'
@@ -9,7 +10,6 @@ declare function acquireVsCodeApi(): {
 	postMessage(message: HostMessage): void,
 }
 
-// @ts-ignore
 const vscode = acquireVsCodeApi()
 
 let state = vscode.getState()
@@ -130,12 +130,14 @@ function rerender() {
 	app.appendChild(canvas)
 	app.appendChild(hover)
 	if (sampler.renderConfig) {
-		app.appendChild(sampler.renderConfig(newConfig => {
+		function onChange(newConfig: unknown) {
 			sampler.setConfig?.(newConfig)
+			sampler.renderConfig?.(onChange)
 			viewConfig = newConfig
 			setState({ viewConfig })
 			requestAnimationFrame(draw)
-		}))
+		}
+		render(h(sampler.renderConfig, onChange), app)
 	}
 
 	const img = ctx.getImageData(0, 0, width, height)

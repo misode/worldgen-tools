@@ -8,7 +8,10 @@
 		"outDir": "out",
 		"sourceMap": true,
 		"rootDir": "src",
-		"strict": true
+		"strict": true,
+		"jsx": "react",
+		"jsxFactory": "h",
+		"jsxFragmentFactory": "Fragment"
 	},
 	"ts-node": {
     "compilerOptions": {

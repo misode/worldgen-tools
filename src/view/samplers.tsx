@@ -1,4 +1,6 @@
 import { BiomeSource, clampedMap, computeIfAbsent, DensityFunction, Identifier, Json, NoiseChunkGenerator, NoiseGeneratorSettings, NoiseParameters, NoiseRouter, NormalNoise, RandomState, WorldgenRegistries, XoroshiroRandom } from 'deepslate'
+import type { JSX } from 'preact'
+import { h } from 'preact'
 import type { Color } from './colormap'
 import { viridis } from './colormap'
 import { hashString } from './util'
@@ -6,7 +8,7 @@ import { hashString } from './util'
 export interface Sampler {
 	sampleColor(x: number, y: number): Color
 	sampleText(x: number, y: number): string
-	renderConfig?(onChange: (value: unknown) => void): HTMLElement
+	renderConfig?(onChange: (value: unknown) => void): JSX.Element
 	setConfig?(value: unknown): void
 }
 
@@ -74,27 +76,14 @@ export class LayeredSampler implements Sampler {
 	}
 
 	public renderConfig(onChange: (value: unknown) => void) {
-		const layerGroup = document.createElement('div')
-		layerGroup.classList.add('layer-group')
-		const layerSelect = document.createElement('div')
-		layerSelect.classList.add('layer-select')
-		layerSelect.tabIndex = 0
-		layerSelect.textContent = this.currentLayer
-		const layerOptions = document.createElement('div')
-		layerOptions.classList.add('layer-options')
-		for (const layer of this.layerNames) {
-			const layerOption = document.createElement('div')
-			layerOption.classList.add('layer-option')
-			layerOption.textContent = layer
-			layerOption.addEventListener('mousedown', () => {
-				layerSelect.textContent = layer
-				onChange(layer)
-			})
-			layerOptions.appendChild(layerOption)
-		}
-		layerGroup.appendChild(layerSelect)
-		layerGroup.appendChild(layerOptions)
-		return layerGroup
+		return <div class="layer-group">
+			<div class="layer-select" tabIndex={0}>{this.currentLayer}</div>
+			<div class="layer-options">
+				{this.layerNames.map(layer =>
+					<div class="layer-option" onMouseDown={() => onChange(layer)}>{layer}</div>
+				)}
+			</div>
+		</div>
 	}
 }
 
