@@ -77,15 +77,16 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 	public async initPanel(panel: vscode.WebviewPanel, state: ViewState) {
 		try {
 			if (!state?.fileUri) {
-				throw new Error('Missing fileUri in state')
+				throw new Error(`Missing fileUri in state ${JSON.stringify(state)}`)
 			}
 			const fileUri = vscode.Uri.parse(state.fileUri, true)
 
+			const filePath = fileUri.fsPath.replace(/\\/g, '/')
 			const type = ViewProvider.TYPES.find(({ match }) => {
-				return minimatch(fileUri.fsPath.replace(/\\/g, '/'), `**/${match}`)
+				return minimatch(filePath, `**/${match}`)
 			})
 			if (!type) {
-				throw new Error('No matching fileType for file')
+				throw new Error(`No matching fileType for file ${filePath} | Tried: ${ViewProvider.TYPES.map(t => t.match).join(', ')}`)
 			}
 
 			panel.title = `${type.name} preview`
