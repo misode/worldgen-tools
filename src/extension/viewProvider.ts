@@ -83,7 +83,7 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 
 			const filePath = fileUri.fsPath.replace(/\\/g, '/')
 			const type = ViewProvider.TYPES.find(({ match }) => {
-				return minimatch(filePath, `**/${match}`)
+				return minimatch(filePath, `**/${match}`, { dot: true })
 			})
 			if (!type) {
 				throw new Error(`No matching fileType for file ${filePath} | Tried: ${ViewProvider.TYPES.map(t => t.match).join(', ')}`)
