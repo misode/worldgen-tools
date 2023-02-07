@@ -1,10 +1,10 @@
-export type ViewState = undefined | {
-	fileUri?: string,
-	viewX?: number,
-	viewY?: number,
-	viewScale?: number,
-	viewConfig?: unknown,
-	seed?: number,
+export type ViewState = {
+	fileUri: string,
+	viewX: number,
+	viewY: number,
+	viewScale: number,
+	viewConfig: unknown,
+	seed: number,
 }
 
 export type HostMessage = {

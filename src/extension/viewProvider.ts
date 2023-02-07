@@ -69,14 +69,14 @@ export class ViewProvider implements vscode.WebviewPanelSerializer {
 		})
 	}
 
-	public async deserializeWebviewPanel(panel: vscode.WebviewPanel, state: ViewState) {
+	public async deserializeWebviewPanel(panel: vscode.WebviewPanel, state: Partial<ViewState> | undefined) {
 		this.logger.log(`[ViewProvider] Deserializing ${JSON.stringify(state)}`)
-		await this.initPanel(panel, state)
+		await this.initPanel(panel, state ?? {})
 	}
 	
-	public async initPanel(panel: vscode.WebviewPanel, state: ViewState) {
+	public async initPanel(panel: vscode.WebviewPanel, state: Partial<ViewState>) {
 		try {
-			if (!state?.fileUri) {
+			if (!state.fileUri) {
 				throw new Error(`Missing fileUri in state ${JSON.stringify(state)}`)
 			}
 			const fileUri = vscode.Uri.parse(state.fileUri, true)

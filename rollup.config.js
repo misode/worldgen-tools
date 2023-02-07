@@ -22,7 +22,7 @@ export default defineConfig([
 		onwarn,
 	},
 	{
-		input: 'src/view/view.ts',
+		input: 'src/view/view.tsx',
 		output: [
 			{
 				file: 'out/view.js',
