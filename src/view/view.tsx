@@ -54,15 +54,20 @@ function App() {
 
 	useEffect(() => {
 		const messageHandler = ({ data: message }: MessageEvent<ViewMessage>) => {
-			console.log('Message', message)
+			console.log('[worldgen-tools] Message', message)
 			switch (message.type) {
 				case 'update':
 					const { fileUri, fileType, fileResource, data } = message
 					setStateRaw({ fileUri: fileUri })
 					Registry.REGISTRY.forEach((key, registry) => {
 						registry.clear()
-						Object.entries(data[key.path] ?? {}).forEach(([type, value]) => {
-							registry.register(Identifier.parse(type), registry.parse(JSON.parse(value as string)))
+						Object.entries(data[key.path] ?? {}).forEach(([id, content]) => {
+							try {
+								const value = registry.parse(JSON.parse(content as string))
+								registry.register(Identifier.parse(id), value)
+							} catch (e) {
+								console.warn(`[worldgen-tools] Failed to register ${key} ${id}:`, content)
+							}
 						})
 					})
 					const json = JSON.parse(data[fileType][fileResource])
@@ -92,7 +97,7 @@ function App() {
 	}, [])
 	const onDraw = useCallback((transform: mat3) => {
 		if (!ctx.current || !imageData.current) return
-		console.log('onDraw', transform)
+		console.log('[worldgen-tools] Draw', transform)
 		iterateWorld2D(imageData.current, transform, (x, y) => {
 			return sampler.sampleColor(x, y)
 		}, c => [c[0] * 256, c[1] * 256, c[2] * 256])

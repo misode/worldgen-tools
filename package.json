@@ -23,7 +23,8 @@
     "commands": [
       {
         "command": "worldgen-tools.openVisualizer",
-        "title": "Open visualizer for current file"
+        "title": "Open visualizer for current file",
+        "category": "Worldgen Tools"
       }
     ]
   },
